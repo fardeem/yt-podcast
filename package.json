@@ -1,0 +1,25 @@
+{
+  "name": "playlist-downloaded",
+  "module": "src/main-ink.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/main-ink.ts",
+    "build": "bun build src/main-ink.ts --compile --outfile yt2podcast"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.1.6",
+    "react-devtools-core": "^6.1.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.826.0",
+    "@inkjs/ui": "^2.0.0",
+    "ink": "^6.0.0",
+    "react": "^19.1.0",
+    "rss": "^1.2.2"
+  }
+}
