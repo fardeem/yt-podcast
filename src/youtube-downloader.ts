@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs/promises";
 import { exec } from "child_process";
 import { promisify } from "util";
+import sharp from "sharp";
 
 const execAsync = promisify(exec);
 
@@ -19,6 +20,37 @@ export class YouTubeDownloader {
 
   async ensureOutputDir() {
     await fs.mkdir(this.outputDir, { recursive: true });
+  }
+
+  async getVideoInfo(videoUrl: string): Promise<VideoMetadata> {
+    const command = `${this.ytDlpPath} --dump-single-json "${videoUrl}"`;
+    
+    try {
+      const { stdout } = await execAsync(command);
+      const videoData = JSON.parse(stdout);
+      
+      // Get the best quality thumbnail
+      let thumbnailUrl = "";
+      if (videoData.thumbnail) {
+        thumbnailUrl = videoData.thumbnail;
+      } else if (videoData.thumbnails && videoData.thumbnails.length > 0) {
+        // Get the highest quality thumbnail (usually the last one)
+        thumbnailUrl = videoData.thumbnails[videoData.thumbnails.length - 1].url;
+      }
+      
+      return {
+        id: videoData.id,
+        title: videoData.title,
+        description: videoData.description || "",
+        duration: videoData.duration || 0,
+        uploadDate: videoData.upload_date || new Date().toISOString(),
+        uploader: videoData.uploader || videoData.channel || "Unknown",
+        thumbnail: thumbnailUrl,
+        url: videoData.webpage_url || `https://www.youtube.com/watch?v=${videoData.id}`,
+      };
+    } catch (error) {
+      throw new Error(`Failed to get video info: ${error}`);
+    }
   }
 
   async getPlaylistInfo(playlistUrl: string): Promise<{
@@ -40,6 +72,7 @@ export class YouTubeDownloader {
       const playlistTitle = playlistData.title || "Unknown Playlist";
       const channelName = playlistData.uploader || playlistData.channel || "Unknown Channel";
 
+      // Map basic video info from flat playlist
       const videos = playlistData.entries.map((entry: any) => ({
         id: entry.id,
         title: entry.title,
@@ -47,9 +80,17 @@ export class YouTubeDownloader {
         duration: entry.duration || 0,
         uploadDate: entry.upload_date || new Date().toISOString(),
         uploader: entry.uploader || channelName,
-        thumbnail: entry.thumbnail || "",
+        thumbnail: "", // Will fetch for first video
         url: `https://www.youtube.com/watch?v=${entry.id}`,
       }));
+
+      // Fetch full info for the first video to get thumbnail
+      if (videos.length > 0 && videos[0]) {
+        console.log(`  → Fetching full metadata for first video to get thumbnail...`);
+        const firstVideoUrl = videos[0].url;
+        const firstVideoFullInfo = await this.getVideoInfo(firstVideoUrl);
+        videos[0] = firstVideoFullInfo;
+      }
 
       return {
         videos,
@@ -121,6 +162,37 @@ export class YouTubeDownloader {
       return outputPath;
     } catch (error) {
       throw new Error(`Failed to download video: ${error}`);
+    }
+  }
+
+  async downloadThumbnail(
+    thumbnailUrl: string,
+    outputFilename: string
+  ): Promise<string> {
+    await this.ensureOutputDir();
+    const outputPath = path.join(this.outputDir, outputFilename);
+
+    try {
+      // Download thumbnail using fetch
+      const response = await fetch(thumbnailUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download thumbnail: ${response.statusText}`);
+      }
+
+      const buffer = await response.arrayBuffer();
+      
+      // Process image: crop to 1:1 aspect ratio from center and resize to 1400x1400
+      await sharp(Buffer.from(buffer))
+        .resize(1400, 1400, {
+          fit: 'cover',
+          position: 'center'
+        })
+        .jpeg({ quality: 90 })
+        .toFile(outputPath);
+
+      return outputPath;
+    } catch (error) {
+      throw new Error(`Failed to download thumbnail: ${error}`);
     }
   }
 

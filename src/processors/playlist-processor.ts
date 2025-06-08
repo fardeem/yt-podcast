@@ -40,6 +40,40 @@ export class PlaylistProcessor {
 
       const podcastSlug = this.uploader.generatePodcastSlug(playlistTitle);
 
+      // Download thumbnail from first video
+      let thumbnailUrl: string | undefined;
+      const firstVideo = videos[0];
+      console.log(`\n→ Processing thumbnail for podcast: ${playlistTitle}`);
+      console.log(`  First video: ${firstVideo?.title}`);
+      console.log(`  Thumbnail URL: ${firstVideo?.thumbnail || "No thumbnail found"}`);
+      
+      if (firstVideo && firstVideo.thumbnail) {
+        callbacks.onProgress?.("downloading", 0, videos.length + 1, "Downloading podcast cover image...");
+        try {
+          console.log(`  → Downloading thumbnail from: ${firstVideo.thumbnail}`);
+          const thumbnailPath = await this.downloader.downloadThumbnail(
+            firstVideo.thumbnail,
+            `${podcastSlug}-cover.jpg`
+          );
+          console.log(`  → Thumbnail downloaded to: ${thumbnailPath}`);
+          
+          // Upload thumbnail to R2
+          const { url } = await this.uploader.uploadPodcastThumbnail(
+            thumbnailPath,
+            podcastSlug
+          );
+          thumbnailUrl = url;
+          console.log(`  → Thumbnail uploaded to R2: ${thumbnailUrl}`);
+          
+          // Clean up local thumbnail file
+          await fs.unlink(thumbnailPath).catch(() => {});
+        } catch (error) {
+          console.error("  ✗ Failed to download/upload thumbnail:", error);
+        }
+      } else {
+        console.log("  ✗ No thumbnail URL found for first video");
+      }
+
       // Download all videos
       const downloadedFiles: string[] = [];
       
@@ -85,6 +119,15 @@ export class PlaylistProcessor {
         channelName,
         videos
       );
+      
+      // Use uploaded thumbnail URL if available
+      if (thumbnailUrl) {
+        console.log(`\n→ Setting podcast cover image: ${thumbnailUrl}`);
+        podcastInfo.imageUrl = thumbnailUrl;
+      } else {
+        console.log(`\n→ No uploaded thumbnail available, using default: ${podcastInfo.imageUrl}`);
+      }
+      
       const feedUrl = `${this.config.r2.publicUrl}/podcasts/${podcastSlug}/feed.xml`;
       const rssFeed = this.rssGenerator.generateFeed(podcastInfo, episodes, feedUrl);
       

@@ -70,6 +70,16 @@ export class R2Uploader {
     return this.uploadFile(filePath, key, "audio/mpeg");
   }
 
+  async uploadPodcastThumbnail(
+    filePath: string,
+    podcastSlug: string
+  ): Promise<{ key: string; url: string; size: number }> {
+    const filename = 'cover.jpg';
+    const key = `podcasts/${podcastSlug}/${filename}`;
+    
+    return this.uploadFile(filePath, key, "image/jpeg");
+  }
+
   async uploadRSSFeed(
     content: string,
     podcastSlug: string
