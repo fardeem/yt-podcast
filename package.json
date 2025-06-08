@@ -1,11 +1,11 @@
 {
   "name": "yt-podcast",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Convert YouTube playlists to podcast RSS feeds",
   "module": "src/main-ink.ts",
   "type": "module",
   "bin": {
-    "yt-podcast": "./dist/cli.js"
+    "yt-podcast": "./dist/cli-wrapper.js"
   },
   "files": [
     "dist",
@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "start": "bun run src/main-ink.ts",
-    "build": "bun build src/main-ink.ts --target node --outfile dist/cli.js",
+    "build": "./build.sh",
     "prepublishOnly": "bun run build",
     "history": "bun run src/list-history.ts"
   },
