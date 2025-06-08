@@ -1,16 +1,13 @@
-#!/usr/bin/env bun
-
-import { YouTubeDownloader } from "./youtube-downloader";
-import { R2Uploader } from "./r2-uploader";
-import { RSSGenerator } from "./rss-generator";
-import { PlaylistProcessor } from "./processors/playlist-processor";
-import { startCLI, CLIController } from "./cli";
-import { InitCLI } from "./init-cli";
-import { ConfigManager, type Config } from "./config-manager";
-import { validatePlaylistUrl } from "./utils/validators";
-import { ValidationError } from "./errors";
 import { render } from "ink";
 import React from "react";
+import { startCLI } from "./cli";
+import { ConfigManager, type Config } from "./config-manager";
+import { InitCLI } from "./init-cli";
+import { PlaylistProcessor } from "./processors/playlist-processor";
+import { R2Uploader } from "./r2-uploader";
+import { RSSGenerator } from "./rss-generator";
+import { validatePlaylistUrl } from "./utils/validators";
+import { YouTubeDownloader } from "./youtube-downloader";
 
 async function runInit(): Promise<Config> {
   return new Promise((resolve, reject) => {
