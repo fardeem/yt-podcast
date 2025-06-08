@@ -1,0 +1,15 @@
+src/
+.DS_Store
+*.log
+node_modules/
+bun.lockb
+.env
+.env.*
+downloads/
+temp/
+*.mp3
+*.mp4
+.git/
+.gitignore
+tsconfig.json
+.bun/

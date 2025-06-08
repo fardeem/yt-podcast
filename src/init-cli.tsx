@@ -19,7 +19,9 @@ type InitStage =
 
 interface InitState {
   stage: InitStage;
-  config: Partial<Config>;
+  config: Partial<Config> & {
+    r2?: Partial<Config['r2']>;
+  };
   deps: {
     ytDlp: { installed: boolean; path?: string };
     ffmpeg: { installed: boolean; path?: string };
@@ -35,7 +37,15 @@ interface InitCLIProps {
 export function InitCLI({ onComplete, onExit }: InitCLIProps) {
   const [state, setState] = useState<InitState>({
     stage: "checking",
-    config: {},
+    config: {
+      r2: {
+        endpoint: "",
+        publicUrl: "",
+        accessKey: "",
+        secretKey: "",
+        bucketName: "",
+      }
+    },
     deps: null,
   });
 
@@ -82,7 +92,7 @@ export function InitCLI({ onComplete, onExit }: InitCLIProps) {
           stage: "r2-public-url",
           config: {
             ...config,
-            r2: { ...config.r2, endpoint: value },
+            r2: { ...state.config.r2!, endpoint: value },
           },
           error: undefined,
         });
@@ -101,7 +111,7 @@ export function InitCLI({ onComplete, onExit }: InitCLIProps) {
           stage: "r2-access-key",
           config: {
             ...config,
-            r2: { ...config.r2, publicUrl: value },
+            r2: { ...state.config.r2!, publicUrl: value },
           },
           error: undefined,
         });
@@ -120,7 +130,7 @@ export function InitCLI({ onComplete, onExit }: InitCLIProps) {
           stage: "r2-secret-key",
           config: {
             ...config,
-            r2: { ...config.r2, accessKey: value.trim() },
+            r2: { ...state.config.r2!, accessKey: value.trim() },
           },
           error: undefined,
         });
@@ -139,7 +149,7 @@ export function InitCLI({ onComplete, onExit }: InitCLIProps) {
           stage: "r2-bucket-name",
           config: {
             ...config,
-            r2: { ...config.r2, secretKey: value.trim() },
+            r2: { ...state.config.r2!, secretKey: value.trim() },
           },
           error: undefined,
         });
@@ -155,7 +165,7 @@ export function InitCLI({ onComplete, onExit }: InitCLIProps) {
         }
         const finalConfig = {
           ...config,
-          r2: { ...config.r2, bucketName: value },
+          r2: { ...state.config.r2!, bucketName: value },
         } as Config;
 
         saveConfig(finalConfig);
@@ -316,7 +326,6 @@ export function InitCLI({ onComplete, onExit }: InitCLIProps) {
           <TextInput
             key="r2-secret-key"
             placeholder="Secret access key"
-            mask="*"
             onSubmit={handleInput}
           />
         </Box>

@@ -1,15 +1,45 @@
 {
-  "name": "playlist-downloaded",
+  "name": "yt-podcast",
+  "version": "1.0.0",
+  "description": "Convert YouTube playlists to podcast RSS feeds",
   "module": "src/main-ink.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "yt-podcast": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "bun run src/main-ink.ts",
-    "build": "bun build src/main-ink.ts --compile --outfile yt2podcast"
+    "build": "bun build src/main-ink.ts --target node --outfile dist/cli.js",
+    "prepublishOnly": "bun run build",
+    "history": "bun run src/list-history.ts"
+  },
+  "keywords": [
+    "youtube",
+    "podcast",
+    "rss",
+    "converter",
+    "playlist",
+    "yt-dlp",
+    "cli"
+  ],
+  "author": "Fardeem Munir",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fardeem/yt-podcast"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/react": "^19.1.6",
+    "@types/rss": "^0.0.32",
     "react-devtools-core": "^6.1.2"
   },
   "peerDependencies": {

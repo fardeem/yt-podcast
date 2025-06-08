@@ -1,5 +1,5 @@
 import RSS from "rss";
-import { PodcastEpisode, VideoMetadata } from "./types";
+import type { PodcastEpisode, VideoMetadata } from "./types";
 
 export interface PodcastInfo {
   title: string;
@@ -24,7 +24,6 @@ export class RSSGenerator {
       feed_url: feedUrl,
       site_url: feedUrl.replace("/feed.xml", ""),
       image_url: podcastInfo.imageUrl,
-      author: podcastInfo.author,
       language: podcastInfo.language,
       pubDate: new Date(),
       ttl: 60,
@@ -32,6 +31,7 @@ export class RSSGenerator {
         itunes: "http://www.itunes.com/dtds/podcast-1.0.dtd",
       },
       custom_elements: [
+        { author: podcastInfo.author },
         { "itunes:author": podcastInfo.author },
         { "itunes:summary": podcastInfo.description },
         { "itunes:explicit": podcastInfo.explicit ? "yes" : "no" },
@@ -57,7 +57,7 @@ export class RSSGenerator {
           size: episode.fileSize,
         },
         custom_elements: [
-          { "itunes:author": podcastInfo.author },
+          { "itunes:author": episode.author || podcastInfo.author },
           { "itunes:subtitle": episode.description.substring(0, 255) },
           { "itunes:duration": episode.duration },
           { "itunes:explicit": podcastInfo.explicit ? "yes" : "no" },
@@ -75,6 +75,24 @@ export class RSSGenerator {
       title: playlistTitle,
       description: `Podcast generated from YouTube playlist: ${playlistTitle}`,
       author: firstVideo?.uploader || "Various Artists",
+      imageUrl: firstVideo?.thumbnail || "",
+      language: "en-US",
+      category: "Technology",
+      explicit: false,
+    };
+  }
+
+  createPodcastInfoFromPlaylist(
+    playlistTitle: string,
+    channelName: string,
+    videos: VideoMetadata[]
+  ): PodcastInfo {
+    const firstVideo = videos[0];
+    
+    return {
+      title: playlistTitle,
+      description: `${playlistTitle} - A podcast series from ${channelName}`,
+      author: channelName,
       imageUrl: firstVideo?.thumbnail || "",
       language: "en-US",
       category: "Technology",
@@ -109,6 +127,7 @@ export class RSSGenerator {
       duration: this.formatDuration(video.duration),
       fileSize,
       guid: `episode-${video.id}`,
+      author: video.uploader,
     };
   }
 }

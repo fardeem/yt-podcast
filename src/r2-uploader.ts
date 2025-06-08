@@ -1,5 +1,5 @@
 import { S3Client, PutObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
-import { Config } from "./config-manager";
+import type { Config } from "./config-manager";
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";

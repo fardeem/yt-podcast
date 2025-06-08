@@ -1,8 +1,9 @@
 import { YouTubeDownloader } from "../youtube-downloader";
 import { R2Uploader } from "../r2-uploader";
 import { RSSGenerator } from "../rss-generator";
-import { Config } from "../config-manager";
+import type { Config } from "../config-manager";
 import { ErrorLogger } from "../utils/error-logger";
+import { HistoryManager } from "../utils/history-manager";
 import { sanitizeFilename } from "../utils/validators";
 import fs from "fs/promises";
 
@@ -15,6 +16,7 @@ export interface ProcessorCallbacks {
 
 export class PlaylistProcessor {
   private errorLogger: ErrorLogger;
+  private historyManager: HistoryManager;
 
   constructor(
     private config: Config,
@@ -23,23 +25,19 @@ export class PlaylistProcessor {
     private rssGenerator: RSSGenerator
   ) {
     this.errorLogger = new ErrorLogger();
+    this.historyManager = new HistoryManager();
   }
 
   async process(playlistUrl: string, callbacks: ProcessorCallbacks = {}): Promise<string> {
     try {
       // Get playlist info
       callbacks.onProgress?.("downloading", 0, 0, "Fetching playlist information...");
-      const videos = await this.downloader.getPlaylistInfo(playlistUrl);
+      const { videos, playlistTitle, channelName } = await this.downloader.getPlaylistInfo(playlistUrl);
       
       if (videos.length === 0) {
         throw new Error("No videos found in playlist");
       }
 
-      // Extract playlist title
-      const playlistTitle = playlistUrl.includes("list=") 
-        ? `Playlist ${playlistUrl.split("list=")[1].split("&")[0]}`
-        : "YouTube Playlist";
-      
       const podcastSlug = this.uploader.generatePodcastSlug(playlistTitle);
 
       // Download all videos
@@ -47,6 +45,8 @@ export class PlaylistProcessor {
       
       for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
+        if (!video) continue;
+        
         callbacks.onProgress?.("downloading", i + 1, videos.length, `Downloading: ${video.title}`);
         
         const filename = `${i + 1}-${sanitizeFilename(video.title)}.mp3`;
@@ -62,7 +62,10 @@ export class PlaylistProcessor {
         callbacks.onProgress?.("uploading", i + 1, downloadedFiles.length, "");
         
         const filePath = downloadedFiles[i];
+        if (!filePath) continue;
+        
         const video = videos[i];
+        if (!video) continue;
         
         const { url, size } = await this.uploader.uploadPodcastEpisode(
           filePath,
@@ -77,7 +80,11 @@ export class PlaylistProcessor {
       // Generate and upload RSS feed
       callbacks.onProgress?.("uploading", 1, 1, "Generating podcast feed...");
       
-      const podcastInfo = this.rssGenerator.createPodcastInfo(playlistTitle, videos);
+      const podcastInfo = this.rssGenerator.createPodcastInfoFromPlaylist(
+        playlistTitle,
+        channelName,
+        videos
+      );
       const feedUrl = `${this.config.r2.publicUrl}/podcasts/${podcastSlug}/feed.xml`;
       const rssFeed = this.rssGenerator.generateFeed(podcastInfo, episodes, feedUrl);
       
@@ -87,6 +94,15 @@ export class PlaylistProcessor {
       for (const file of downloadedFiles) {
         await fs.unlink(file).catch(() => {});
       }
+
+      // Save to history
+      await this.historyManager.addEntry({
+        playlistUrl,
+        playlistTitle,
+        channelName,
+        feedUrl: finalFeedUrl,
+        episodeCount: videos.length,
+      });
 
       // Complete
       callbacks.onStageChange?.("complete");

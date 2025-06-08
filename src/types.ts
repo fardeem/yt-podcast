@@ -17,4 +17,5 @@ export interface PodcastEpisode {
   duration: string;
   fileSize: number;
   guid: string;
+  author?: string;
 }
